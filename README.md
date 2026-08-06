@@ -1,0 +1,31 @@
+# obs-platform
+
+Учебная платформа наблюдаемости: VictoriaMetrics, VictoriaLogs, Grafana, Vector, Alertmanager.
+Стенд для отработки навыков SRE / Observability Engineer.
+
+## Структура
+```
+apps/payment-api/   подопытный сервис (метрики, JSON-логи, управляемый хаос)
+apps/loadgen/       генератор фонового трафика
+monitoring/         конфигурации стека наблюдаемости
+dashboards/         дашборды Grafana как код
+docs/runbooks/      инструкции по реагированию на алерты
+docs/postmortems/   разборы инцидентов
+```
+
+## Быстрый старт
+```bash
+k3d cluster create obs-lab --agents 2 --k3s-arg "--disable=traefik@server:0"
+make build
+make deploy
+make port        # в отдельном терминале
+curl localhost:8000/metrics
+```
+
+## Управление хаосом
+| Команда | Эффект |
+|---|---|
+| `make chaos-slow`   | задержка 800 мс на каждый запрос |
+| `make chaos-errors` | 30% запросов отвечают 500 |
+| `make chaos-down`   | сервис отдаёт 503, readiness падает |
+| `make chaos-reset`  | вернуть в норму |
