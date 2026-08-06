@@ -1,7 +1,7 @@
 # obs-platform
 
-Учебная платформа наблюдаемости: VictoriaMetrics, VictoriaLogs, Grafana, Vector, Alertmanager.
-Стенд для отработки навыков SRE / Observability Engineer.
+Учебная платформа наблюдаемости: Prometheus, Grafana, Loki, Alertmanager.
+Стенд для отработки навыков SRE / Observability Engineer : мониторинг, алертинг, SLI/SLO, разбор инцидентов.
 
 ## Структура
 ```
@@ -18,7 +18,7 @@ docs/postmortems/   разборы инцидентов
 k3d cluster create obs-lab --agents 2 --k3s-arg "--disable=traefik@server:0"
 make build
 make deploy
-make port        # в отдельном терминале
+make port        
 curl localhost:8000/metrics
 ```
 
