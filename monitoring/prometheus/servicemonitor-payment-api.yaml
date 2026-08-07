@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: payment-api
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  # В каких namespace искать Service
+  namespaceSelector:
+    matchNames:
+      - banking
+  # Какой Service искать — по его лейблам
+  selector:
+    matchLabels:
+      app: payment-api
+  endpoints:
+    - port: http          # ИМЯ порта из Service, не номер
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s

@@ -67,13 +67,13 @@ def log_event(level: str, msg: str, **fields) -> None:
 http_requests_total = Counter(
     "http_requests_total",
     "Всего HTTP-запросов",
-    ["method", "endpoint", "status"],
+    ["method", "path", "status"],
 )
 
 http_request_duration = Histogram(
     "http_request_duration_seconds",
     "Длительность обработки HTTP-запроса",
-    ["method", "endpoint"],
+    ["method", "path"],
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
 )
 
