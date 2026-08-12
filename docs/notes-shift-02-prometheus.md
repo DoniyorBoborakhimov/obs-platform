@@ -99,3 +99,38 @@ pod, container, service, endpoint.
    годится для экспортеров, не для обычного приложения
 
 Отладка: если метрика "не та", смотри exported_<label>
+
+Grafana
+Подключаем Prometheus как источник данных, разбираем готовые дашборды,
+строим свой по методологии RED, храним дашборды как код в git.
+Разбор рестартов
+
+kubectl describe pod <pod> | grep -A8 "Last State"
+
+Exit Code:
+  0   — штатное завершение
+  137 — OOMKilled (128+9, SIGKILL). Почти всегда память
+  143 — SIGTERM, не успел завершиться в grace period
+  255 — Unknown, часто артефакт остановки ноды снаружи
+
+Признаки настоящей проблемы (а не штатной остановки):
+  - растущий Restart Count
+  - CrashLoopBackOff
+  - Finished в момент, когда никто ничего не трогал
+
+kubectl logs <pod> --previous    # логи УМЕРШЕГО контейнера
+kubectl get events --sort-by='.lastTimestamp'
+DNS в Kubernetes
+
+Полное имя: <service>.<namespace>.svc.cluster.local
+Сокращения:
+  payment-api                       — из того же namespace
+  payment-api.banking               — из другого namespace
+  payment-api.banking.svc.cluster.local — полностью
+
+Резолвит CoreDNS (под в kube-system).
+ClusterIP — виртуальный IP, за ним правила iptables/eBPF на каждой ноде.
+Процесса-балансировщика по этому адресу НЕТ.
+
+Правило: в конфигах ВСЕГДА DNS-имя сервиса, никогда IP пода.
+Под пересоздался -> IP другой, имя Service то же.
