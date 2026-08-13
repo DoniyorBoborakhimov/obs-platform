@@ -134,3 +134,7 @@ ClusterIP — виртуальный IP, за ним правила iptables/eBP
 
 Правило: в конфигах ВСЕГДА DNS-имя сервиса, никогда IP пода.
 Под пересоздался -> IP другой, имя Service то же.
+
+Loki
+Ставим Loki + Promtail, собираем JSON-логи payment-api,
+учимся LogQL, связываем логи с метриками в Grafana.

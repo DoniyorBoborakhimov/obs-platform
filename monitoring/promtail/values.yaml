@@ -1,0 +1,24 @@
+config:
+  clients:
+    - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+  snippets:
+    # Дополнительная обработка для наших JSON-логов
+    pipelineStages:
+      - cri: {}                    # снять обёртку формата CRI
+      - json:                      # распарсить наш JSON
+          expressions:
+            level: level
+            service: service
+      - labels:                    # только низкокардинальные поля в лейблы
+          level:
+
+daemonset:
+  enabled: true
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

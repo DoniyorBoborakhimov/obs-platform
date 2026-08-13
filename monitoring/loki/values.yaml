@@ -1,0 +1,48 @@
+# Loki в monolithic-режиме для учебного стенда
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false          # без мультитенантности, на стенде не нужна
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: filesystem           # в проде здесь был бы s3 или minio
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+  limits_config:
+    retention_period: 168h     # 7 дней, как у Prometheus
+    volume_enabled: true
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    size: 10Gi
+
+# Выключаем всё, что нужно только в масштабируемых режимах
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+
+gateway:
+  enabled: false
