@@ -79,7 +79,14 @@
               }
             ]
           },
-          "unit": "reqps"
+          "unit": "reqps",
+          "links": [
+            {
+              "title": "Логи этого пути",
+              "targetBlank": true,
+              "url": "/explore?left={\"datasource\":\"loki\",\"queries\":[{\"refId\":\"A\",\"datasource\":{\"type\":\"loki\",\"uid\":\"loki\"},\"expr\":\"{namespace=\\\"banking\\\", app=\\\"payment-api\\\"} | json | path = `${__field.labels.path}`\"}],\"range\":{\"from\":\"${__from}\",\"to\":\"${__to}\"}}"
+            }
+          ]
         }
       },
       "gridPos": {
@@ -203,7 +210,14 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "percentunit",
+          "links": [
+            {
+              "title": "Показать логи ошибок",
+              "targetBlank": true,
+              "url": "/explore?left={\"datasource\":\"loki\",\"queries\":[{\"refId\":\"A\",\"datasource\":{\"type\":\"loki\",\"uid\":\"loki\"},\"expr\":\"{namespace=\\\"banking\\\", app=\\\"payment-api\\\"} | json | status >= 500\"}],\"range\":{\"from\":\"${__from}\",\"to\":\"${__to}\"}}"
+            }
+          ]
         }
       },
       "gridPos": {
