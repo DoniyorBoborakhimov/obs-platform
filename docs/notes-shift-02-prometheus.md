@@ -138,3 +138,29 @@ ClusterIP — виртуальный IP, за ним правила iptables/eBP
 Loki
 Ставим Loki + Promtail, собираем JSON-логи payment-api,
 учимся LogQL, связываем логи с метриками в Grafana.
+
+Provisioned-дашборды нельзя править через UI
+
+Симптом: правишь в UI, жмёшь Save, но изменения не сохраняются.
+Причина: дашборд провижененный, Grafana защищает его от правок.
+Проверка: GET /api/dashboards/uid/<uid> -> .meta.provisioned == true
+
+Единственный правильный путь изменения:
+1. правишь JSON в git (руками или через jq)
+2. пересобираешь ConfigMap
+3. kubectl apply
+4. sidecar подхватывает за ~30 сек
+
+Это не неудобство, а СМЫСЛ подхода: источник истины — git, не база Grafana.
+
+Приём для правки JSON точечно:
+jq --argjson link "$LINK" \
+  '(.panels[] | select(.title == "Error Ratio") | .fieldConfig.defaults.links) = $link' \
+  file.json
+
+Где искать ссылки в JSON дашборда:
+  panel.links                        — кнопки в заголовке панели
+  panel.fieldConfig.defaults.links   — data links (клик по графику)
+
+Поиск пути до значения в незнакомом JSON:
+jq 'paths(type=="string" and test("текст"))' file.json
