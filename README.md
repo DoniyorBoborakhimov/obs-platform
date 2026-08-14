@@ -18,9 +18,16 @@ docs/postmortems/   разборы инцидентов
 k3d cluster create obs-lab --agents 2 --k3s-arg "--disable=traefik@server:0"
 make build
 make deploy
-make port        
-curl localhost:8000/metrics
-```
+## Доступ
+
+| Сервис | URL |
+|---|---|
+| Grafana | http://grafana.localtest.me:8080 |
+| Prometheus | http://prometheus.localtest.me:8080 |
+| Alertmanager | http://alerts.localtest.me:8080 |
+| payment-api | http://payment.localtest.me:8080 |
+
+Домен `localtest.me` резолвится в 127.0.0.1 — настройка hosts не требуется.
 
 ## Управление хаосом
 | Команда | Эффект |
