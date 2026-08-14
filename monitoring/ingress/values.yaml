@@ -1,0 +1,35 @@
+controller:
+  replicaCount: 1
+
+  service:
+    type: NodePort
+    nodePorts:
+      http: 30080
+      https: 30443
+
+  # Слушать порт 80/443 прямо на ноде — так serverlb от k3d достучится
+  hostPort:
+    enabled: true
+    ports:
+      http: 80
+      https: 443
+
+  # Метрики для Prometheus — ради них мы и выбрали nginx
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prom
+
+  # Добавить лейблы хоста и пути в метрики латентности
+  config:
+    enable-underscores-in-headers: "true"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
