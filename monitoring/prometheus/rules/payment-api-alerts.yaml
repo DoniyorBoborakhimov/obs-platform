@@ -1,0 +1,68 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payment-api-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+    - name: payment-api.rules
+      interval: 30s
+      rules:
+
+        # down
+        - alert: PaymentApiDown
+          expr: |
+            sum(up{job="payment-api"}) == 0
+          for: 2m
+          labels:
+            severity: critical
+            team: payments
+          annotations:
+            summary: "payment-api полностью недоступен"
+            description: "Ни один под payment-api не отвечает на скрейп более 2 минут."
+            runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-down.md"
+
+        # errors
+        - alert: PaymentApiHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="payment-api", status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="payment-api"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+            team: payments
+          annotations:
+            summary: "Доля ошибок payment-api выше 5%"
+            description: "Текущая доля 5xx: {{ printf \"%.2f\" $value }}. Порог 0.05."
+            runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-errors.md"
+
+        # Симптом: MS
+        - alert: PaymentApiHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_request_duration_seconds_bucket{job="payment-api", path="/payment"}[5m]))
+            ) > 0.5
+          for: 10m
+          labels:
+            severity: warning
+            team: payments
+          annotations:
+            summary: "p95 латентности /payment выше 500 мс"
+            description: "Текущее значение p95: {{ printf \"%.3f\" $value }}s"
+
+          #биснес метрика
+        - alert: PaymentsStopped
+          expr: |
+            sum(rate(payments_total{job="payment-api", status="success"}[10m])) == 0
+          for: 5m
+          labels:
+            severity: critical
+            team: payments
+          annotations:
+            summary: "Успешные платежи не проходят"
+            description: "За последние 10 минут не прошло ни одного успешного платежа."

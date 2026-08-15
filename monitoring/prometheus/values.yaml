@@ -24,6 +24,53 @@ grafana:
 
 alertmanager:
   enabled: true
+  config:
+    global:
+      resolve_timeout: 1m
+
+    route:
+      group_by: ['alertname', 'namespace']
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 4h
+      receiver: 'webhook-default'
+
+      routes:
+        # Watchdog не шлём никуда — он горит всегда
+        - matchers:
+            - alertname = "Watchdog"
+          receiver: 'null'
+
+        # critical — отдельный маршрут, чаще напоминаем
+        - matchers:
+            - severity = "critical"
+          receiver: 'webhook-critical'
+          group_wait: 10s
+          repeat_interval: 1h
+
+    receivers:
+      - name: 'null'
+
+      - name: 'webhook-default'
+        webhook_configs:
+          - url: 'http://webhook-logger.monitoring.svc.cluster.local:8080/'
+            send_resolved: true
+
+      - name: 'webhook-critical'
+        webhook_configs:
+          - url: 'http://webhook-logger.monitoring.svc.cluster.local:8080/'
+            send_resolved: true
+
+    inhibit_rules:
+      # Если сервис лёг целиком — не слать про ошибки и латентность
+      - source_matchers: [alertname = "PaymentApiDown"]
+        target_matchers: [team = "payments"]
+        equal: ['team']
+
+      # critical подавляет warning того же сервиса
+      - source_matchers: [severity = "critical"]
+        target_matchers: [severity = "warning"]
+        equal: ['team']
 
 kubeControllerManager:
   enabled: false

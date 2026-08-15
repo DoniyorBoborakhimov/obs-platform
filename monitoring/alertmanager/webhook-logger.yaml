@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-logger
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: webhook-logger}
+  template:
+    metadata:
+      labels: {app: webhook-logger}
+    spec:
+      containers:
+        - name: logger
+          image: python:3.12-slim
+          command: ["python", "-c"]
+          args:
+            - |
+              import json
+              from http.server import BaseHTTPRequestHandler, HTTPServer
+
+              class Handler(BaseHTTPRequestHandler):
+                  def do_POST(self):
+                      length = int(self.headers.get("Content-Length", 0))
+                      body = self.rfile.read(length)
+                      try:
+                          data = json.loads(body)
+                          print("=" * 70, flush=True)
+                          print(f"receiver={data.get('receiver')} status={data.get('status')}", flush=True)
+                          print(f"groupKey={data.get('groupKey')}", flush=True)
+                          print(f"alerts: {len(data.get('alerts', []))}", flush=True)
+                          for a in data.get("alerts", []):
+                              print(json.dumps({
+                                  "status": a.get("status"),
+                                  "labels": a.get("labels"),
+                                  "annotations": a.get("annotations"),
+                                  "startsAt": a.get("startsAt"),
+                              }, ensure_ascii=False, indent=2), flush=True)
+                      except Exception as e:
+                          print(f"parse error: {e}\n{body}", flush=True)
+                      self.send_response(200)
+                      self.end_headers()
+                      self.wfile.write(b"ok")
+
+                  def log_message(self, *args):
+                      pass
+
+              HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+          ports:
+            - containerPort: 8080
+          resources:
+            requests: {cpu: 20m, memory: 32Mi}
+            limits: {memory: 128Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webhook-logger
+  namespace: monitoring
+spec:
+  selector: {app: webhook-logger}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
