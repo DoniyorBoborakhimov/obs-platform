@@ -1,0 +1,68 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payment-api-diagnostics
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+    - name: payment-api.diagnostics
+      interval: 30s
+      rules:
+
+        # Под убит по памяти
+        - alert: PaymentApiOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{namespace="banking", container="payment-api", reason="OOMKilled"} == 1
+          for: 1m
+          labels:
+            severity: warning
+            team: payments
+          annotations:
+            summary: "payment-api убит по нехватке памяти"
+            description: "Под {{ $labels.pod }} убит OOM killer. Проверить лимиты и утечки."
+
+        # Память подошла к лимиту — предупреждение ДО падения
+        - alert: PaymentApiMemoryNearLimit
+          expr: |
+            container_memory_working_set_bytes{namespace="banking", container="payment-api"}
+            / on(pod) group_left
+            kube_pod_container_resource_limits{namespace="banking", container="payment-api", resource="memory"}
+            > 0.85
+          for: 10m
+          labels:
+            severity: warning
+            team: payments
+          annotations:
+            summary: "payment-api использует более 85% лимита памяти"
+            description: "Под {{ $labels.pod }}: {{ $value | humanizePercentage }} от лимита."
+
+        # Деплой застрял: желаемое число реплик не совпадает с готовыми
+        - alert: PaymentApiRolloutStuck
+          expr: |
+            kube_deployment_status_observed_generation{namespace="banking", deployment="payment-api"}
+              != kube_deployment_metadata_generation{namespace="banking", deployment="payment-api"}
+            or
+            kube_deployment_status_replicas_updated{namespace="banking", deployment="payment-api"}
+              < kube_deployment_spec_replicas{namespace="banking", deployment="payment-api"}
+          for: 10m
+          labels:
+            severity: warning
+            team: payments
+          annotations:
+            summary: "Выкат payment-api не завершается более 10 минут"
+            description: "Новые поды не становятся готовыми. Проверить CrashLoopBackOff и лимиты."
+
+        # Поды перезапускаются
+        - alert: PaymentApiPodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="banking", container="payment-api"}[15m]) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: payments
+          annotations:
+            summary: "payment-api перезапускается"
+            description: "Под {{ $labels.pod }}: {{ $value | printf \"%.0f\" }} рестартов за 15 минут."
+

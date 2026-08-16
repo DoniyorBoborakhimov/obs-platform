@@ -1,0 +1,101 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: payment-api-slo
+  namespace: monitoring
+  labels:
+    release: kube-prom
+spec:
+  groups:
+    # SLI на разных окнах 
+    - name: payment-api.sli
+      interval: 30s
+      rules:
+        # Availability: доля не-5xx среди пользовательских запросов
+        - record: sli:payment_api_availability:ratio_rate5m
+          expr: |
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz", status!~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz"}[5m]))
+
+        - record: sli:payment_api_availability:ratio_rate30m
+          expr: |
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz", status!~"5.."}[30m]))
+            /
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz"}[30m]))
+
+        - record: sli:payment_api_availability:ratio_rate1h
+          expr: |
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz", status!~"5.."}[1h]))
+            /
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz"}[1h]))
+
+        - record: sli:payment_api_availability:ratio_rate6h
+          expr: |
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz", status!~"5.."}[6h]))
+            /
+            sum(rate(http_requests_total{job="payment-api", path!~"/healthz|/readyz"}[6h]))
+
+        # Latency: доля запросов быстрее 300 мс
+        - record: sli:payment_api_latency:ratio_rate5m
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{job="payment-api", path!~"/healthz|/readyz", le="0.25"}[5m]))
+            /
+            sum(rate(http_request_duration_seconds_count{job="payment-api", path!~"/healthz|/readyz"}[5m]))
+
+        - record: sli:payment_api_latency:ratio_rate1h
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{job="payment-api", path!~"/healthz|/readyz", le="0.25"}[1h]))
+            /
+            sum(rate(http_request_duration_seconds_count{job="payment-api", path!~"/healthz|/readyz"}[1h]))
+
+              # Burn rate алерты 
+    - name: payment-api.slo.alerts
+      interval: 30s
+      rules:
+
+        # Быстрое выгорание: 2% бюджета за час. Будим.
+        - alert: PaymentApiErrorBudgetBurnFast
+          expr: |
+            (1 - sli:payment_api_availability:ratio_rate1h) > (14.4 * 0.005)
+            and
+            (1 - sli:payment_api_availability:ratio_rate5m) > (14.4 * 0.005)
+          for: 2m
+          labels:
+            severity: critical
+            team: payments
+            slo: availability
+          annotations:
+            summary: "Бюджет ошибок payment-api горит в 14.4x быстрее нормы"
+            description: >-
+              Доля ошибок за час: {{ $value | humanizePercentage }}.
+              При такой скорости месячный бюджет сгорит примерно за 2 дня.
+            runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-errors.md"
+
+        # Среднее выгорание: 5% бюджета за 6 часов. Будим.
+        - alert: PaymentApiErrorBudgetBurnMedium
+          expr: |
+            (1 - sli:payment_api_availability:ratio_rate6h) > (6 * 0.005)
+            and
+            (1 - sli:payment_api_availability:ratio_rate30m) > (6 * 0.005)
+          for: 15m
+          labels:
+            severity: critical
+            team: payments
+            slo: availability
+          annotations:
+            summary: "Бюджет ошибок payment-api горит в 6x быстрее нормы"
+            description: "При такой скорости месячный бюджет сгорит примерно за 5 дней."
+
+        # Медленное выгорание: задача, не будим
+        - alert: PaymentApiErrorBudgetBurnSlow
+          expr: |
+            (1 - sli:payment_api_availability:ratio_rate6h) > (3 * 0.005)
+          for: 1h
+          labels:
+            severity: warning
+            team: payments
+            slo: availability
+          annotations:
+            summary: "Бюджет ошибок payment-api горит в 3x быстрее нормы"
+            description: "Не критично сейчас, но требует разбора в рабочее время."

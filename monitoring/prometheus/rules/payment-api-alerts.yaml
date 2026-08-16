@@ -15,7 +15,7 @@ spec:
         - alert: PaymentApiDown
           expr: |
             sum(up{job="payment-api"}) == 0
-          for: 2m
+          for: 0.5m
           labels:
             severity: critical
             team: payments
@@ -32,7 +32,7 @@ spec:
               /
               sum(rate(http_requests_total{job="payment-api"}[5m]))
             ) > 0.05
-          for: 5m
+          for: 1m
           labels:
             severity: critical
             team: payments
@@ -47,7 +47,7 @@ spec:
             histogram_quantile(0.95,
               sum by (le) (rate(http_request_duration_seconds_bucket{job="payment-api", path="/payment"}[5m]))
             ) > 0.5
-          for: 10m
+          for: 2m
           labels:
             severity: warning
             team: payments
@@ -59,7 +59,7 @@ spec:
         - alert: PaymentsStopped
           expr: |
             sum(rate(payments_total{job="payment-api", status="success"}[10m])) == 0
-          for: 5m
+          for: 0.25m
           labels:
             severity: critical
             team: payments
