@@ -1,0 +1,51 @@
+rule_files:
+  - /tmp/rules-check/payment-api-alerts.yaml
+
+evaluation_interval: 30s
+
+tests:
+  # --- Сервис недоступен ---
+  - interval: 30s
+    input_series:
+      - series: 'up{job="payment-api", pod="payment-api-1"}'
+        values: '1x10 0x20'      # 10 интервалов жив, потом 20 мёртв
+
+    alert_rule_test:
+      # Через 4 минуты после начала: ещё жив, алерта быть не должно
+      - eval_time: 4m
+        alertname: PaymentApiDown
+        exp_alerts: []
+
+      # Через 8 минут: мёртв уже 3 минуты, for=1m прошёл — алерт есть
+      - eval_time: 8m
+        alertname: PaymentApiDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: payments
+            exp_annotations:
+              summary: "payment-api полностью недоступен"
+              description: "Ни один под payment-api не отвечает на скрейп более 2 минут."
+              runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-down.md"
+
+  # --- Высокая доля ошибок ---
+  - interval: 30s
+    input_series:
+      # всего запросов: растёт на 10 за интервал
+      - series: 'http_requests_total{job="payment-api", status="200", path="/payment", method="POST"}'
+        values: '0+9x40'
+      # ошибок: растёт на 1 за интервал => доля ~10%
+      - series: 'http_requests_total{job="payment-api", status="500", path="/payment", method="POST"}'
+        values: '0+1x40'
+
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PaymentApiHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: payments
+            exp_annotations:
+              summary: "Доля ошибок payment-api выше 5%"
+              description: "Текущая доля 5xx: 0.10. Порог 0.05."
+              runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-errors.md"

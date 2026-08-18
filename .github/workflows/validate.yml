@@ -1,0 +1,100 @@
+name: Validate observability configs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  PROMETHEUS_VERSION: "3.6.0"
+
+jobs:
+  lint-yaml:
+    name: YAML syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install yamllint
+      - run: yamllint -c .yamllint.yml .
+
+  validate-k8s:
+    name: Kubernetes manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -sL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+            | tar xz -C /tmp
+          sudo install -m 0755 /tmp/kubeconform /usr/local/bin/
+
+      - name: Validate
+        run: |
+          kubeconform \
+            -summary \
+            -ignore-missing-schemas \
+            -skip PrometheusRule,ServiceMonitor \
+            apps/ monitoring/
+
+  prometheus-rules:
+    name: Prometheus rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install promtool and yq
+        run: |
+          curl -sL "https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.linux-amd64.tar.gz" \
+            | tar xz -C /tmp
+          sudo install -m 0755 "/tmp/prometheus-${PROMETHEUS_VERSION}.linux-amd64/promtool" /usr/local/bin/
+          sudo curl -sL -o /usr/local/bin/yq \
+            https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Extract rules from PrometheusRule CRDs
+        run: |
+          mkdir -p /tmp/rules-check
+          for f in monitoring/prometheus/rules/*.yaml; do
+            yq '.spec' "$f" > "/tmp/rules-check/$(basename "$f")"
+          done
+
+      - name: Check syntax
+        run: promtool check rules /tmp/rules-check/*.yaml
+
+      - name: Run unit tests
+        run: promtool test rules tests/*.test.yaml
+
+  dashboards:
+    name: Grafana dashboards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON
+        run: |
+          for f in dashboards/*.json; do
+            echo "checking $f"
+            jq empty "$f" || exit 1
+          done
+
+      - name: Check required fields
+        run: |
+          for f in dashboards/*.json; do
+            uid=$(jq -r '.uid // "null"' "$f")
+            title=$(jq -r '.title // "null"' "$f")
+            if [ "$uid" = "null" ] || [ "$title" = "null" ]; then
+              echo "ОШИБКА: $f не содержит uid или title"
+              exit 1
+            fi
+            echo "ok: $title (uid=$uid)"
+          done
+
+      - name: Reject volatile fields
+        run: |
+          for f in dashboards/*.json; do
+            if jq -e 'has("id") and .id != null' "$f" >/dev/null; then
+              echo "ОШИБКА: $f содержит поле id — уберите, оно ломает переносимость"
+              exit 1
+            fi
+          done

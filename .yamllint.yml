@@ -1,0 +1,24 @@
+extends: default
+
+rules:
+  line-length:
+    max: 200
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: false
+  truthy:
+    allowed-values: ['true', 'false', 'on']
+  document-start: disable
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  braces:
+    max-spaces-inside: 1
+  empty-lines:
+    max-end: 1
+
+ignore: |
+  dashboards/
+  .git/
+  monitoring/grafana/dashboard-*.yaml

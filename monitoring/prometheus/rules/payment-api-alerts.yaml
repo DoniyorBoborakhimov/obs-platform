@@ -10,12 +10,11 @@ spec:
     - name: payment-api.rules
       interval: 30s
       rules:
-
-        # down
+        #down
         - alert: PaymentApiDown
           expr: |
             sum(up{job="payment-api"}) == 0
-          for: 0.5m
+          for: 30s
           labels:
             severity: critical
             team: payments
@@ -23,8 +22,7 @@ spec:
             summary: "payment-api полностью недоступен"
             description: "Ни один под payment-api не отвечает на скрейп более 2 минут."
             runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-down.md"
-
-        # errors
+        #errors
         - alert: PaymentApiHighErrorRate
           expr: |
             (
@@ -40,8 +38,7 @@ spec:
             summary: "Доля ошибок payment-api выше 5%"
             description: "Текущая доля 5xx: {{ printf \"%.2f\" $value }}. Порог 0.05."
             runbook_url: "https://github.com/DoniyorBoborakhimov/obs-platform/blob/main/docs/runbooks/payment-api-errors.md"
-
-        # Симптом: MS
+        #Симпто_ MS
         - alert: PaymentApiHighLatency
           expr: |
             histogram_quantile(0.95,
@@ -54,12 +51,11 @@ spec:
           annotations:
             summary: "p95 латентности /payment выше 500 мс"
             description: "Текущее значение p95: {{ printf \"%.3f\" $value }}s"
-
-          #биснес метрика
+        #биснеc_ метрика
         - alert: PaymentsStopped
           expr: |
             sum(rate(payments_total{job="payment-api", status="success"}[10m])) == 0
-          for: 0.25m
+          for: 15s
           labels:
             severity: critical
             team: payments

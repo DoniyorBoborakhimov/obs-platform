@@ -7,7 +7,7 @@ metadata:
     release: kube-prom
 spec:
   groups:
-    # SLI на разных окнах 
+    # SLI на разных окнах
     - name: payment-api.sli
       interval: 30s
       rules:
@@ -49,7 +49,7 @@ spec:
             /
             sum(rate(http_request_duration_seconds_count{job="payment-api", path!~"/healthz|/readyz"}[1h]))
 
-              # Burn rate алерты 
+              # Burn rate алерты
     - name: payment-api.slo.alerts
       interval: 30s
       rules:
