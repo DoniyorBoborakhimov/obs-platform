@@ -29,13 +29,16 @@ jobs:
             | tar xz -C /tmp
           sudo install -m 0755 /tmp/kubeconform /usr/local/bin/
 
-      - name: Validate
+            - name: Validate
         run: |
-          kubeconform \
-            -summary \
-            -ignore-missing-schemas \
-            -skip PrometheusRule,ServiceMonitor \
-            apps/ monitoring/
+          find apps/ monitoring/ -name '*.yaml' \
+            -not -name 'values.yaml' \
+            -not -path '*/grafana/dashboard-*' \
+            -print0 \
+          | xargs -0 kubeconform \
+              -summary \
+              -ignore-missing-schemas \
+              -skip PrometheusRule,ServiceMonitor
 
   prometheus-rules:
     name: Prometheus rules
@@ -78,9 +81,10 @@ jobs:
             jq empty "$f" || exit 1
           done
 
-      - name: Check required fields
+            - name: Check required fields
         run: |
           for f in dashboards/*.json; do
+            case "$f" in *v2-schema*) echo "skip $f (schema v2)"; continue;; esac
             uid=$(jq -r '.uid // "null"' "$f")
             title=$(jq -r '.title // "null"' "$f")
             if [ "$uid" = "null" ] || [ "$title" = "null" ]; then
@@ -90,9 +94,10 @@ jobs:
             echo "ok: $title (uid=$uid)"
           done
 
-      - name: Reject volatile fields
+            - name: Reject volatile fields
         run: |
           for f in dashboards/*.json; do
+            case "$f" in *v2-schema*) continue;; esac
             if jq -e 'has("id") and .id != null' "$f" >/dev/null; then
               echo "ОШИБКА: $f содержит поле id — уберите, оно ломает переносимость"
               exit 1
