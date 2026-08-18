@@ -29,7 +29,7 @@ jobs:
             | tar xz -C /tmp
           sudo install -m 0755 /tmp/kubeconform /usr/local/bin/
 
-            - name: Validate
+      - name: Validate
         run: |
           find apps/ monitoring/ -name '*.yaml' \
             -not -name 'values.yaml' \
@@ -81,7 +81,7 @@ jobs:
             jq empty "$f" || exit 1
           done
 
-            - name: Check required fields
+      - name: Check required fields
         run: |
           for f in dashboards/*.json; do
             case "$f" in *v2-schema*) echo "skip $f (schema v2)"; continue;; esac
@@ -94,7 +94,7 @@ jobs:
             echo "ok: $title (uid=$uid)"
           done
 
-            - name: Reject volatile fields
+      - name: Reject volatile fields
         run: |
           for f in dashboards/*.json; do
             case "$f" in *v2-schema*) continue;; esac
