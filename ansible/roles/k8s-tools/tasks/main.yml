@@ -1,0 +1,42 @@
+- name: Установить kubectl
+  become: true
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+    owner: root
+    group: root
+
+- name: Проверить наличие helm
+  ansible.builtin.stat:
+    path: /usr/local/bin/helm
+  register: helm_bin
+
+- name: Установить helm
+  become: true
+  ansible.builtin.shell: |
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  when: not helm_bin.stat.exists
+  changed_when: true
+
+- name: Проверить наличие k3d
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3d
+  register: k3d_bin
+
+- name: Установить k3d
+  become: true
+  ansible.builtin.shell: |
+    curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+  when: not k3d_bin.stat.exists
+  changed_when: true
+
+- name: Показать версии инструментов
+  ansible.builtin.command: "{{ item }}"
+  loop:
+    - kubectl version --client=true -o yaml
+    - helm version --short
+    - k3d version
+  register: tool_versions
+  changed_when: false
+  check_mode: false
