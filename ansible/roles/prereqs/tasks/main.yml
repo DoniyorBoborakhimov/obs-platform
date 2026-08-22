@@ -29,7 +29,7 @@
     - make
   register: versions
   changed_when: false
-  check_mode: false 
+  check_mode: false
 
 - name: Показать версии
   ansible.builtin.debug:
