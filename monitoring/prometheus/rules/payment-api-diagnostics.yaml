@@ -65,4 +65,3 @@ spec:
           annotations:
             summary: "payment-api перезапускается"
             description: "Под {{ $labels.pod }}: {{ $value | printf \"%.0f\" }} рестартов за 15 минут."
-
