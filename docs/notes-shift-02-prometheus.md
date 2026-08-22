@@ -32,7 +32,7 @@ prometheus.prometheusSpec:
   scrapeInterval: ""      # пусто = глобальный дефолт 30s
   serviceMonitorSelectorNilUsesHelmValues: true
       # по умолчанию подбирает только ServiceMonitor с лейблом release=<релиз>
-     
+
 Prometheus Operator: конфиг prometheus.yml не правим руками.
 Создаём объекты k8s (ServiceMonitor, PodMonitor, PrometheusRule),
 оператор сам генерирует конфиг и перезагружает Prometheus.

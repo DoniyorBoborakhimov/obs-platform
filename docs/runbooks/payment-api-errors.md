@@ -120,4 +120,3 @@ kubectl -n banking scale deploy/payment-api --replicas=5
 
 ---
 *Обновлён: 2026-08-16. Владелец: команда payments.*
-
