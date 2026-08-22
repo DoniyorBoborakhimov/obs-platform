@@ -1,0 +1,36 @@
+---
+- name: Обновить кэш пакетов
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Установить базовые пакеты
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - jq
+      - make
+      - vim
+      - htop
+      - ca-certificates
+      - gnupg
+      - bind9-dnsutils
+      - yamllint
+    state: present
+
+- name: Проверить установленные версии
+  ansible.builtin.command: "{{ item }} --version"
+  loop:
+    - git
+    - jq
+    - make
+  register: versions
+  changed_when: false
+  check_mode: false 
+
+- name: Показать версии
+  ansible.builtin.debug:
+    msg: "{{ versions.results | map(attribute='stdout_lines') | map('first') | list }}"

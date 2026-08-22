@@ -1,0 +1,13 @@
+---
+- name: Подготовка рабочей станции для obs-platform
+  hosts: workstation
+  gather_facts: true
+
+  vars:
+    cluster_name: obs-lab
+
+  roles:
+    - prereqs
+    - docker
+    - k8s-tools
+    - cluster
