@@ -2,3 +2,12 @@ __pycache__/
 *.pyc
 .venv/
 data/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfplan
+terraform/.terraform.lock.hcl.bak
+*.auto.tfvars
+terraform.tfvars
